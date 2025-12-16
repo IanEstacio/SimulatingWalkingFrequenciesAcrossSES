@@ -1,0 +1,618 @@
+model TrecSim
+
+global {
+	float seedvalue <- 10.0;	
+	float startt <- machine_time;
+	//--Initilization parameters--
+	//Experiment type
+	bool stop_currentrun <- false;
+	bool is_batch <- false;
+	bool SESmodel1 <- false;
+	//Positioning of tree agents
+	float dist_bet_tree <- 35.0 #m;	
+	//Hour of experiment
+	int startingtime <- 9;
+	int endingtime <- 16; 													
+	
+	//--Simulation parameters--
+	//Properties of human agents 
+    float slow_speed <- 0.89 #meters/#second;
+    float fast_speed <- 1.33 #meters/#second;
+    float slow_metrate <- 116.3;
+    float fast_metrate <- 151.19;
+    float formal_icl <- 0.48;
+    float casual_icl <- 0.24;
+    int min_goout_end <- 1;															
+    int max_goout_end <- 30;
+    int min_tolerance_sec <- 240;
+    int max_tolerance_sec <- 480;
+		
+    //Modification of the environment from trees
+    float MRT_coef <- 510.0;
+    float distfromtree_coef <- 0.7;
+    float angle_coef <- 4.3;
+    float length_coef <- 2.26;
+	
+	//--import of files and setting of the environment--
+	//shapefiles
+	file shape_file_building <- shape_file("../includes/Buildings.shp");
+	file shape_file_pathway <- shape_file("../includes/Pathway.shp");
+	file shape_file_target <- shape_file("../includes/Target.shp");
+	file shape_file_treeline <- shape_file("../includes/Tree line.shp");
+	file shape_file_boundary <- shape_file("../includes/Boundary.shp");
+	//csv
+	file csv_file_AltAzi <- csv_file("../includes/Altitude_Azimuth.csv",",");
+	matrix matrixAltAzi <- matrix(csv_file_AltAzi);
+	file csv_file_Socioeconomic <- csv_file("../includes/Socioeconomic_parameters.csv",",");
+	matrix matrixSocioeconomic <- matrix(csv_file_Socioeconomic);
+	file csv_file_PedNum <- csv_file("../includes/Pedestrian_Number.csv",",");
+	matrix matrixPedNum <- matrix(csv_file_PedNum);
+
+    //Stochasticity parameters - affecting randomness
+	int global_speed_no <- rnd(1, 2);
+	int global_clothes_no <- rnd(1, 2);
+	float walking_threshold <- gauss(0.5,0.2);
+	float coef_comfort_status_to_comfort_assessment_randomizer <- rnd(0.0,1.0);	
+	float env_attitude_SES1 <- gauss(float(matrixSocioeconomic[2,0]),float(matrixSocioeconomic[3,0]))/5;
+	float env_attitude_SES2 <- gauss(float(matrixSocioeconomic[2,1]),float(matrixSocioeconomic[3,1]))/5;
+	float env_attitude_SES3 <- gauss(float(matrixSocioeconomic[2,2]),float(matrixSocioeconomic[3,1]))/5;
+	list<float> env_attitude_SES <- [env_attitude_SES1, env_attitude_SES2, env_attitude_SES3];
+	float income_SES1 <- rnd(0.00,5000.00);
+	float income_SES2 <- rnd(5000.00,10000.00);
+	float income_SES3 <- rnd(10000.00,15000.00);
+	list<float> income_SES <- [income_SES1/150000.00, income_SES2/150000.00, income_SES3/150000.00];
+	
+	//raster files
+	grid_file raster_file_AirTemp09 <- file('../includes/AirTemp/1airtemp9.asc');
+	grid_file raster_file_MRT09 <- file('../includes/MRT/1mrt9.asc');
+	grid_file raster_file_Windspeed09 <- file('../includes/Windspeed/1windspeed9.asc');
+	grid_file raster_file_RH09 <- file('../includes/RelativeHumidity/1relhum9.asc');
+	grid_file raster_file_AirTemp10 <- file('../includes/AirTemp/1airtemp10.asc');
+	grid_file raster_file_MRT10 <- file('../includes/MRT/1mrt10.asc');
+	grid_file raster_file_Windspeed10 <- file('../includes/Windspeed/1windspeed10.asc');
+	grid_file raster_file_RH10 <- file('../includes/RelativeHumidity/1relhum10.asc');
+	grid_file raster_file_AirTemp11 <- file('../includes/AirTemp/1airtemp11.asc');
+	grid_file raster_file_MRT11 <- file('../includes/MRT/1mrt11.asc');
+	grid_file raster_file_Windspeed11 <- file('../includes/Windspeed/1windspeed11.asc');
+	grid_file raster_file_RH11 <- file('../includes/RelativeHumidity/1relhum11.asc');
+	grid_file raster_file_AirTemp12 <- file('../includes/AirTemp/1airtemp12.asc');
+	grid_file raster_file_MRT12 <- file('../includes/MRT/1mrt12.asc');
+	grid_file raster_file_Windspeed12 <- file('../includes/Windspeed/1windspeed12.asc');
+	grid_file raster_file_RH12 <- file('../includes/RelativeHumidity/1relhum12.asc');
+	grid_file raster_file_AirTemp13 <- file('../includes/AirTemp/1airtemp13.asc');
+	grid_file raster_file_MRT13 <- file('../includes/MRT/1mrt13.asc');
+	grid_file raster_file_Windspeed13 <- file('../includes/Windspeed/1windspeed13.asc');
+	grid_file raster_file_RH13 <- file('../includes/RelativeHumidity/1relhum13.asc');
+	grid_file raster_file_AirTemp14 <- file('../includes/AirTemp/1airtemp14.asc');
+	grid_file raster_file_MRT14 <- file('../includes/MRT/1mrt14.asc');
+	grid_file raster_file_Windspeed14 <- file('../includes/Windspeed/1windspeed14.asc');
+	grid_file raster_file_RH14 <- file('../includes/RelativeHumidity/1relhum14.asc');
+	grid_file raster_file_AirTemp15 <- file('../includes/AirTemp/1airtemp15.asc');
+	grid_file raster_file_MRT15 <- file('../includes/MRT/1mrt15.asc');
+	grid_file raster_file_Windspeed15 <- file('../includes/Windspeed/1windspeed15.asc');
+	grid_file raster_file_RH15 <- file('../includes/RelativeHumidity/1relhum15.asc');
+	list<grid_file> rasterbands <- [raster_file_AirTemp09, raster_file_MRT09, raster_file_Windspeed09, raster_file_RH09,
+			raster_file_AirTemp10, raster_file_MRT10, raster_file_Windspeed10, raster_file_RH10,
+			raster_file_AirTemp11, raster_file_MRT11, raster_file_Windspeed11, raster_file_RH11,
+			raster_file_AirTemp12, raster_file_MRT12, raster_file_Windspeed12, raster_file_RH12,
+			raster_file_AirTemp13, raster_file_MRT13, raster_file_Windspeed13, raster_file_RH13,
+			raster_file_AirTemp14, raster_file_MRT14, raster_file_Windspeed14, raster_file_RH14,
+			raster_file_AirTemp15, raster_file_MRT15, raster_file_Windspeed15, raster_file_RH15];
+	field fieldMRT <- field(rasterbands[1]);
+	//boundary
+	geometry shape <- envelope(shape_file_boundary);
+	//time step
+	float step <- 10 #seconds;
+
+    //--Temporal variables--
+    int current_hour <- int(cycle/360) + startingtime update: int(cycle/360) + startingtime;
+    int previous_hour <- startingtime - 2;
+    int current_minute <- int(cycle/6) mod 60 update: int(cycle/6) mod 60;
+    int current_second <- (cycle*10) mod 60 update: (cycle*10) mod 60;
+    
+    //Variables to be monitored
+    float meanmrt <- 0.0;
+    int nb_people -> {person count (each.size = 1.5)};
+    int nb_trees -> {tree count (each.size = 2.0)};
+    float sumbuildingarea;
+	float sumbuildingvolume;
+	int nb_haswalked -> {person count (each.haswalked)};
+	int nb_hascommuted -> {person count (each.hascommuted)};
+	int nb_reacheddestination -> {person count (each.reacheddestination)};
+	int nb_haswalkedSES1 -> {person count (each.socioeconomicstatus = 1 and each.haswalked)};
+	int nb_hascommutedSES1 -> {person count (each.socioeconomicstatus = 1 and each.hascommuted)};
+	int nb_reacheddestinationSES1 -> {person count (each.socioeconomicstatus = 1 and each.reacheddestination)};
+	int nb_haswalkedSES2 -> {person count (each.socioeconomicstatus = 2 and each.haswalked)};
+	int nb_hascommutedSES2 -> {person count (each.socioeconomicstatus = 2 and each.hascommuted)};
+	int nb_reacheddestinationSES2 -> {person count (each.socioeconomicstatus = 2 and each.reacheddestination)};
+	int nb_haswalkedSES3 -> {person count (each.socioeconomicstatus = 3 and each.haswalked)};
+	int nb_hascommutedSES3 -> {person count (each.socioeconomicstatus = 3 and each.hascommuted)};
+	int nb_reacheddestinationSES3 -> {person count (each.socioeconomicstatus = 3 and each.reacheddestination)};
+
+	//--initialization setting--
+	init {
+		if (walking_threshold < 0.0){
+			walking_threshold <- 0.0;
+		} else if (walking_threshold > 1.0){
+			walking_threshold <- 1.0;
+		}
+	
+		seed <- seedvalue;
+		create building from: shape_file_building with:[area::float(get("Area"))];
+		create pathway from: shape_file_pathway;
+		create target from: shape_file_target;
+		create treeline from: shape_file_treeline;									
+		ask env_cell {
+			grid_value <- 0.0;
+			neighbours  <- self neighbors_at 2;			
+			origMRT <- float(field(rasterbands[1])[grid_x,grid_y]);
+			modMRT <- float(field(rasterbands[1])[grid_x,grid_y]);
+			diffMRT <- 0.0;			
+			modAirTemp <- float(field(rasterbands[0])[grid_x,grid_y]);
+			modWindspeed <- float(field(rasterbands[2])[grid_x,grid_y]);
+			modRH <- float(field(rasterbands[3])[grid_x,grid_y]);
+			if (modMRT = -9999) or (modRH = -9999) or (modWindspeed = 0.0){
+				isabuilding <- true;
+			} else{	 
+				isabuilding <- false;
+			}	
+			loop sidewalk over: pathway{
+				if (sidewalk intersects self){
+					if (isabuilding){
+						isapathway <- false;
+					} else{	 
+						isapathway <- true;
+					}
+				} else{
+					isapathway <- false;
+				}
+			}
+			if (isapathway){
+				color <- rgb(255,255,0);
+				geometry closest_building <- building closest_to self;
+				float dist_to_closest_building <- self distance_to closest_building;
+			} else{
+				color <- rgb(255,255,255);
+			}
+		}
+		sumbuildingarea <- building sum_of (each.area);
+		list<point> tree_pt_list;
+		loop line over: treeline{
+			list<point> ptlist_inline <-  line points_on(dist_bet_tree);	
+			add ptlist_inline to: tree_pt_list all:true;		
+		}
+		loop pt over: tree_pt_list{
+			create tree number: 1 {
+            location <- pt.location;
+            my_cell <- env_cell(location);        
+    		}					
+		}
+		meanmrt <- env_cell where each.isapathway mean_of (each.modMRT);
+	}
+	
+	reflex stop_simulation when: current_hour = endingtime{
+        write "duration of simulation: " + (machine_time - startt)/1000;
+		stop_currentrun <- true;
+		if !is_batch{
+			save env_cell to:"../results/walkingdensity.asc" format:"asc";
+    		save env_cell to:"../results/walkingdensity.tif" format:"geotiff";
+        	save [dist_bet_tree, nb_people, nb_trees,
+            	global_speed_no, global_clothes_no, walking_threshold, coef_comfort_status_to_comfort_assessment_randomizer,
+            	env_attitude_SES1, env_attitude_SES2, env_attitude_SES3,
+            	income_SES1, income_SES2, income_SES3,
+            	meanmrt, nb_haswalked,nb_hascommuted, nb_reacheddestination,
+            	nb_haswalkedSES1,nb_hascommutedSES1, nb_reacheddestinationSES1,
+    			nb_haswalkedSES2,nb_hascommutedSES2, nb_reacheddestinationSES2,
+    			nb_haswalkedSES3,nb_hascommutedSES3, nb_reacheddestinationSES3
+            ] to: "../results/Simulationresults.csv" format: "csv" rewrite: true header: true;
+            do pause;    						
+		}  	
+    }  
+	
+	reflex updatecrossingmap {
+		float maxgrid_value <- env_cell max_of (each.grid_value);
+		float mingrid_value <- env_cell min_of (each.grid_value);
+		if (maxgrid_value-mingrid_value != 0){
+			ask env_cell {
+				if isapathway{
+					color <- rgb(255,int(255.0*(1.0 - ((grid_value-mingrid_value)/(maxgrid_value-mingrid_value)))),0);	
+				}
+			}
+		}
+	}
+	
+	//Hourly sub-model
+	reflex updatehourlyenvironment when: (current_hour > previous_hour + 1) and (current_hour != endingtime){	 
+		int indext <- current_hour-startingtime;
+		int AirTempindext <- indext*4;
+		int MRTindext <- indext*4 + 1; 
+		int Windspeedindext <- indext*4 + 2; 
+		int RHindext <- indext*4 + 3;  
+		ask env_cell {
+			modAirTemp <- float(field(rasterbands[AirTempindext])[grid_x,grid_y]);
+			origMRT <- float(field(rasterbands[MRTindext])[grid_x,grid_y]);
+			modWindspeed <- float(field(rasterbands[Windspeedindext])[grid_x,grid_y]);
+			modRH <- float(field(rasterbands[RHindext])[grid_x,grid_y]);
+		}
+		float Altitude <- float(matrixAltAzi[1,indext]);
+		float Azimuth <- float(matrixAltAzi[2,indext]);
+		float max_mrt <- env_cell where (!each.isabuilding) max_of (each.origMRT);
+		ask tree{
+			loop cell over: env_cell where each.isapathway{
+				float mrtminus <- cell.origMRT - max_mrt;	
+				matrix<float> matrixX <- matrix([[cell.location.x,cell.location.y]]);		
+				float distfromtreex <- -sin(Azimuth)*distfromtree_coef*tree_height/tan(Altitude);
+				float distfromtreey <- cos(Azimuth)*distfromtree_coef*tree_height/tan(Altitude);				
+				matrix<float> matrixM <- matrix([[location.x+distfromtreex,location.y+distfromtreey]]);
+				matrix<float> matrixE <- matrix([
+												[length_coef*abs(distfromtreex),angle_coef*sin(Azimuth)],
+												[angle_coef*sin(Azimuth),length_coef*abs(distfromtreey)]]);
+				matrix<float> shiftmatrix <- matrixX-matrixM;
+				matrix<float> exp <- -0.5*transpose(shiftmatrix).inverse(matrixE).shiftmatrix;
+				float det <- determinant(matrixE);
+				float diffMRTfromtree <- MRT_coef*(1/cos(Azimuth))*exp(exp[0,0])/(2*#pi*(det^0.5));
+				if (diffMRTfromtree < mrtminus) and (diffMRTfromtree < cell.diffMRT){
+					cell.diffMRT <- diffMRTfromtree;
+				}
+			}	
+		}
+		ask env_cell {
+			modMRT <- origMRT + diffMRT;
+		}
+		int PedestrianNumber <- 100;
+		loop structure over: building{			
+			int num_people_inside <- round(PedestrianNumber*structure.area/sumbuildingarea);
+			target farthesttarget <- target farthest_to structure;
+			loop SES from: 1 to: 3 { 
+				create person number: num_people_inside {
+					//route
+					work_end <- 1;
+					origin_bd <- structure; 
+					end_target <- farthesttarget;
+					//Metabolic rate
+					slow <- global_speed_no = 1 ? true: false;
+					speed <- slow = true ? slow_speed : fast_speed;
+					Metrate <- slow = true ? slow_metrate : fast_metrate;
+					MecPow <- 0.0;
+					//Clothes
+					formal <- global_clothes_no = 1 ? true: false;
+					Icl <- formal = true ? formal_icl*0.078*2 : casual_icl*0.078*2;
+					//--Socioeconomic status parameters--
+					socioeconomicstatus <- SES;
+					//Comfort parameters
+					if SESmodel1{
+						coef_income_to_env_attitude <- 0.0;
+						coef_env_attitude_to_env_perception <- 1.0;
+						coef_env_perception_to_comfort_assessment <- 1.0;
+						coef_comfort_status_to_comfort_assessment <- coef_comfort_status_to_comfort_assessment_randomizer;
+						coef_income_to_comfort_assessment <- 0.0;
+						coef_comfort_assessment_to_feeling_of_walking <- float(matrixSocioeconomic[4,SES-1]);
+						coef_feeling_of_walking_to_walking_acceptance <- float(matrixSocioeconomic[5,SES-1]);
+					} else {
+						coef_income_to_env_attitude <- 0.13;
+						coef_env_attitude_to_env_perception <- 0.12;
+						coef_env_perception_to_comfort_assessment <- 0.14;
+						coef_comfort_status_to_comfort_assessment <- 0.60;
+						coef_income_to_comfort_assessment <- -0.17;
+						coef_comfort_assessment_to_feeling_of_walking <- 1.0;
+						coef_feeling_of_walking_to_walking_acceptance <- 1.0;						
+					}
+					//Continuous states
+					inside_building <- true;
+					decided <- false;
+					walking <- false;
+					//Output state
+					haswalked <- false;
+					hascommuted <- false;
+					reacheddestination <- false;
+					//Location
+			    	location <- centroid(origin_bd);
+			        my_cell <- env_cell(location);
+			        nearest_pathway_cell <- env_cell where each.isapathway closest_to self;	
+					do add_desire(time_to_still_work);				
+				}
+			}
+		}
+		previous_hour <- current_hour - 1;
+    }   	
+}
+
+species person skills: [moving] control:simple_bdi{
+	//--Basic--
+	rgb color <- #transparent;
+	float size <- 1.5;
+	aspect base{
+		draw circle(size) color: color;
+	}
+	//--Route--
+	int work_end;
+	building origin_bd;
+	target end_target;
+	//--Metabolic rate parameters--
+	bool slow;
+	float speed;
+	float Metrate;
+	float MecPow;	
+	//--Clothes parameters--
+	bool formal;
+	float Icl;
+	//--Socioeconomic status--
+	int socioeconomicstatus;
+	//--Comfort--
+	list<float> comfort_status_list;
+	float Ave_comfort_status;
+	//--General behavioral SEM coefficients--
+	float coef_income_to_env_attitude;
+	float coef_env_attitude_to_env_perception;
+	float coef_env_perception_to_comfort_assessment;
+	float coef_comfort_status_to_comfort_assessment;
+	float coef_income_to_comfort_assessment;
+	float coef_comfort_assessment_to_feeling_of_walking;
+	float coef_feeling_of_walking_to_walking_acceptance;
+	//--Continuous states--
+	bool inside_building;
+	bool decided;
+	bool walking;
+	//--Output State--
+	bool haswalked;
+	bool hascommuted;
+	bool reacheddestination;
+	//--Location--
+	env_cell my_cell;// update: env_cell(location);
+	env_cell nearest_pathway_cell;
+	//--Beliefs--
+	predicate time_to_still_work <- new_predicate("It is still working hours");
+	predicate time_to_go_home <- new_predicate("It is time to go home");
+	predicate cannot_walk <- new_predicate("Environment is hot", true);
+	//--Desires--
+	predicate go_out <- new_predicate("Go out of building");
+	predicate walk <- new_predicate("Walk out of work vicinity");
+	predicate commute <- new_predicate("Commute out of work vicinity");	        
+	
+	//Commuter movement, sensing, and walking behavior
+	//--Perception--
+    perceive target:self when: inside_building{
+		if(current_minute >= work_end){
+			do remove_belief(time_to_still_work);
+			do add_belief(time_to_go_home);
+		}
+	}
+	perceive target:my_cell when: not inside_building{
+		ask myself {
+			//Environmental variables
+			float AirTemp <- my_cell.modAirTemp;
+			float MRT <- my_cell.modMRT;
+			float Windspeed <- my_cell.modWindspeed;
+			float RelHum <- my_cell.modRH;
+			float comfort_status;
+			
+			//PMV model
+			//Computing vapour pressure
+			float ps <- exp(16.6536-(4030.183/(AirTemp+235.0)));
+			float pa <- 1000.0*(RelHum/100.0)*ps;
+			//Skin temperature
+			float Tskin <- 35.7-(0.028*(Metrate-MecPow));
+			//Clothing surface area factor
+			float fclless <- 1.0+(1.29*Icl);
+			float fclmore  <- 1.05+(0.645*Icl);
+			float fcl <- fclless;
+			if (Icl > 0.078){fcl <- fclmore;}
+			//Clothing temperature
+			float InitTcl <- (AirTemp+Tskin)/2.0;
+			float Tcldiff <- 0.1;
+			float Tcl <- InitTcl;
+			float hc;
+			loop while: (Tcldiff > 0.001){
+				//Heat transfer coefficient
+				float hcnat <- 2.38*(abs(Tcl-AirTemp)^0.25);
+				float hcfor <- 12.1*(Windspeed^0.5);
+				hc <- max([hcnat,hcfor]);
+				//Finalizing clothing temperature
+				float NewTcl <- Tskin-(Icl*((3.96*(10^-8)*fcl*(((Tcl+273)^4)-((MRT+273)^4)))+(fcl*hc*(Tcl-AirTemp))));
+				Tcldiff <- abs(Tcl - NewTcl);
+				Tcl <- (NewTcl + Tcl)/2;	
+			}
+			//Fluxes
+			float Perspiration <- 3.05*(10.0^-3.0)*(5733.0-(6.99*(Metrate-MecPow))-pa);
+			float Sweating <- 0.42*(Metrate-MecPow-58.15);
+			float Breathinglatent <- 1.7*(10.0^-5.0)*Metrate*(5867.0-pa);
+			float Breathingsensible <- 0.0014*Metrate*(34.00-AirTemp);
+			float Radiation <- (3.96*(10.0^-8.0)*fcl*(((Tcl+273.0)^4.0)-((MRT+273.0)^4.0)));
+			float Convection <- fcl*hc*(Tcl-AirTemp);
+			float Totalflux <- Perspiration + Sweating + Breathinglatent + Breathingsensible + Radiation + Convection;
+			float Balance <- Metrate - MecPow - Totalflux;
+			//PMV
+			float PMV <- (0.303*exp(-0.036*Metrate)+0.028)*Balance;
+			float PET <- (0.1607*(PMV^2))+(5.3214*PMV)+20.531;
+			comfort_status <- (51.0-PET)/(51.0-35.0);
+			add comfort_status to: comfort_status_list;
+		}
+	}
+	//--Rule--
+	rule when: inside_building belief: time_to_go_home new_desire: go_out;
+	rule when: not inside_building and not decided new_desire: walk;
+	//--Plan--
+	plan GoOutBuilding intention: go_out {
+		if self intersects nearest_pathway_cell{
+			inside_building <- false;
+			do remove_desire(go_out);
+			do add_belief(go_out);
+		} else{
+			do goto target: nearest_pathway_cell speed: speed;
+			my_cell <- env_cell(location);
+		}
+	}
+	plan WalkToTarget intention: walk{
+		color <- #blue;
+		decided <- true;
+		walking <- true;
+		if (self distance_to end_target) < 1.5 #meters{
+			color <- #transparent;
+			walking <- false;
+			reacheddestination <- true;
+			//Get average comfort level
+			Ave_comfort_status <- mean(comfort_status_list);
+			//Structural equation model
+			float income <- float(income_SES[socioeconomicstatus-1]);
+			float env_attitude;
+			float feeling_of_walking_normalizer;
+			float walking_acceptance_normalizer;
+			if SESmodel1{
+				env_attitude <- float(env_attitude_SES[socioeconomicstatus-1]);
+				feeling_of_walking_normalizer <- 0.775;
+				walking_acceptance_normalizer <- 0.577;
+			} else{
+				env_attitude <- income*coef_income_to_env_attitude;
+				feeling_of_walking_normalizer <- 1.0;
+				walking_acceptance_normalizer <- 1.0;
+			}
+			float env_perception <- env_attitude*coef_env_attitude_to_env_perception;
+			float comfort_assessment <- ((env_perception*coef_env_perception_to_comfort_assessment)
+										+(Ave_comfort_status*coef_comfort_status_to_comfort_assessment)
+										+(income*coef_income_to_comfort_assessment))
+										/(coef_env_perception_to_comfort_assessment
+											+coef_comfort_status_to_comfort_assessment
+											+coef_income_to_comfort_assessment						
+										);
+			float feeling_of_walking <- comfort_assessment*coef_comfort_assessment_to_feeling_of_walking/feeling_of_walking_normalizer;
+			float walking_acceptance <- feeling_of_walking*coef_feeling_of_walking_to_walking_acceptance/walking_acceptance_normalizer;
+			//Setting desire to walk or not
+			if walking_acceptance < walking_threshold{
+				do add_belief(cannot_walk);
+				haswalked <- false;
+				hascommuted <- true;
+			} else {
+				haswalked <- true;
+				hascommuted <- false;
+			}
+			do remove_desire(walk);	
+		} else {
+			do goto target: end_target on: (env_cell where each.isapathway) speed: speed recompute_path: true;
+			env_cell currentcell <- env_cell(location);
+			if (my_cell != currentcell){
+				my_cell <- currentcell;	
+				my_cell.grid_value <- my_cell.grid_value + 1;
+				loop cell over: my_cell.neighbours{
+					if (cell.isapathway){
+						cell.grid_value <- cell.grid_value + 1;
+					} 
+				}
+			}
+		}
+	}
+}	
+
+species building {
+	rgb color <- rgb(228,226,211);
+	aspect default {
+		draw shape color: color;
+	}
+	float area;
+}
+
+species pathway {
+	rgb color <- rgb(178,178,178);
+	aspect default {
+		draw shape color: color;
+	}
+}
+
+species target {
+	rgb color <- #red;
+	aspect default {
+		draw shape color: color;
+	}
+}
+
+species tree {
+	float tree_height <- 8.0;
+	rgb color <- #green;
+	float size <- 2.0;
+	aspect default {
+		draw circle(size) color: color;
+	}
+	env_cell my_cell; 
+}
+
+species treeline {
+	rgb color <- #darkgray;
+	aspect default {
+		draw shape color: color;
+	}
+}
+
+grid env_cell width: fieldMRT.columns height: fieldMRT.rows neighbors: 8 {
+	list<env_cell> neighbours;					
+	float origMRT;
+	float modMRT;
+	float diffMRT;
+	float modAirTemp;
+	float modWindspeed;
+	float modRH;	
+	bool isapathway;
+	bool isabuilding;
+	float h_over_d;
+}
+	
+
+experiment Normal type: gui {
+	parameter "Batch mode:" var: is_batch <- false;
+	output {
+		display map_display type: 2d {
+			species pathway;
+			species building;
+			species tree;
+			species person aspect: base;
+		}
+		monitor "Hour" value: current_hour;
+		monitor "Minute" value: current_minute;
+		monitor "Second" value: current_second;
+		monitor "Meanmrt" value: meanmrt;
+		monitor "Has walked" value: nb_haswalked;
+		monitor "Has commuted" value: nb_hascommuted;
+		monitor "Total that reached their destination" value: nb_reacheddestination;
+		monitor "Total number of people" value: nb_people;
+	}
+}
+
+experiment Batch type: batch repeat: 12 keep_seed: true until: stop_currentrun{
+	parameter "Distance between trees" var: dist_bet_tree min: 5.0 max: 35.0 step: 10.0;	
+	parameter "Batch mode:" var: is_batch <- true;
+	
+	permanent {
+		display Comparison {
+			chart "nb_haswalkedfromstart" type: series {
+				data "Mean" value: mean(simulations collect each.nb_haswalked ) style: spline color: #blue ;
+				data "Min" value:  min(simulations collect each.nb_haswalked ) style: spline color: #darkgreen ;
+				data "Max" value:  max(simulations collect each.nb_haswalked ) style: spline color: #red ;
+			}
+		}	
+	}
+	
+		reflex 	 {
+	        save [dist_bet_tree,
+	            	nb_people, nb_trees,
+	            	global_speed_no, global_clothes_no, walking_threshold, coef_comfort_status_to_comfort_assessment_randomizer,
+	            	env_attitude_SES1, env_attitude_SES2, env_attitude_SES3,
+	            	meanmrt, nb_haswalked,nb_hascommuted, nb_reacheddestination,
+	            	nb_haswalkedSES1,nb_hascommutedSES1, nb_reacheddestinationSES1,
+	            	nb_haswalkedSES2,nb_hascommutedSES2, nb_reacheddestinationSES2,
+	       			nb_haswalkedSES3,nb_hascommutedSES3, nb_reacheddestinationSES3
+	            ] to: "../results/Batch_aggre.csv" format: "csv" rewrite: false header: true;  
+	        int simnumber <- 1;
+		    ask simulations {
+		        save [simnumber,
+		        		dist_bet_tree,
+	            		self.nb_people, self.nb_trees,
+		            	self.global_speed_no, self.global_clothes_no, self.walking_threshold, self.coef_comfort_status_to_comfort_assessment_randomizer,
+		            	self.env_attitude_SES1, self.env_attitude_SES2, self.env_attitude_SES3,
+	            		self.meanmrt, self.nb_haswalked,self.nb_hascommuted, self. nb_reacheddestination,
+						self.nb_haswalkedSES1,self.nb_hascommutedSES1, self.nb_reacheddestinationSES1,
+	           			self.nb_haswalkedSES2,self.nb_hascommutedSES2, self.nb_reacheddestinationSES2,
+	           			self.nb_haswalkedSES3,self.nb_hascommutedSES3, self.nb_reacheddestinationSES3
+	            ] to: "../results/Batch_ind.csv" format: "csv" rewrite: false header: true;
+		        simnumber <- simnumber + 1;
+		    }
+		    write "run finished";  	
+	    }    
+}
